@@ -1,0 +1,71 @@
+name: Terraform
+
+on:
+  pull_request:
+    paths:
+      - "stacks/**"
+      - "modules/**"
+  push:
+    branches: [main]
+    paths:
+      - "stacks/**"
+      - "modules/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write # required for Workload Identity Federation
+
+jobs:
+  detect-stacks:
+    runs-on: ubuntu-latest
+    outputs:
+      stacks: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            crypto-price-etl:
+              - 'stacks/crypto-price-etl/**'
+              - 'modules/**'
+            streaming-analytics:
+              - 'stacks/streaming-analytics/**'
+              - 'modules/**'
+            flatten-json:
+              - 'stacks/flatten-json/**'
+              - 'modules/**'
+
+  plan-or-apply:
+    needs: detect-stacks
+    if: needs.detect-stacks.outputs.stacks != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack: ${{ fromJson(needs.detect-stacks.outputs.stacks) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.CI_SERVICE_ACCOUNT_EMAIL }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: terraform init
+        working-directory: stacks/${{ matrix.stack }}
+        run: terraform init
+
+      - name: terraform plan
+        working-directory: stacks/${{ matrix.stack }}
+        run: terraform plan -out=tfplan -input=false
+
+      # Modules with lifecycle.prevent_destroy will fail apply (not plan) if
+      # a change would destroy a dataset/table — this is the safety net for
+      # running apply unattended on merge.
+      - name: terraform apply
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: stacks/${{ matrix.stack }}
+        run: terraform apply -input=false -auto-approve tfplan
