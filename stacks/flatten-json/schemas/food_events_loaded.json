@@ -1,0 +1,14 @@
+[
+  {"name": "date_created", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "date_started", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "outcomes", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "reactions", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "report_number", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "consumer_age", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "consumer_age_unit", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "consumer_gender", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "products_industry_code", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "products_industry_name", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "products_name_brand", "type": "STRING", "mode": "NULLABLE"},
+  {"name": "products_role", "type": "STRING", "mode": "NULLABLE"}
+]

@@ -1,10 +1,6 @@
 # Mirrors flatten-nested-json-dataproc/scripts/{setup_gcp.sh,config.sh.example}.
-#
-# ⚠️ scripts/config.sh is gitignored in that repo and was never present
-# locally, so the two bucket names below are placeholders following that
-# script's naming convention, NOT confirmed real values. Confirm against
-# your actual config.sh before applying, or this will create new buckets
-# instead of adopting existing ones.
+# Bucket/dataset/table names below were confirmed against the live project
+# (gcloud storage buckets list / bq ls), not guessed.
 #
 # NOTE: Dataproc Serverless batches (submit_batch.sh) are one-off job
 # submissions, not standing infra, so they're intentionally not managed here.
@@ -39,21 +35,18 @@ variable "region" {
 }
 
 variable "data_bucket_name" {
-  description = "PLACEHOLDER — confirm against scripts/config.sh's DATA_BUCKET before applying."
-  type        = string
-  default     = "crypto-etl-project-465203-openfda-data"
+  type    = string
+  default = "crypto-etl-project-465203-openfda-data"
 }
 
 variable "staging_bucket_name" {
-  description = "PLACEHOLDER — confirm against scripts/config.sh's STAGING_BUCKET before applying."
-  type        = string
-  default     = "crypto-etl-project-465203-dataproc-staging"
+  type    = string
+  default = "crypto-etl-project-465203-dataproc-staging"
 }
 
 locals {
   bq_dataset_id = "openfda"
-  bq_table_id   = "food_events"
-  flattened_path = "flattened/openfda_food_events"
+  bq_table_id   = "food_events_loaded"
 }
 
 resource "google_project_service" "apis" {
@@ -68,24 +61,26 @@ resource "google_project_service" "apis" {
 }
 
 module "data_bucket" {
-  source     = "../../modules/gcs-bucket"
-  project_id = var.project_id
-  name       = var.data_bucket_name
-  location   = var.region
+  source                      = "../../modules/gcs-bucket"
+  project_id                  = var.project_id
+  name                        = var.data_bucket_name
+  location                    = var.region
+  uniform_bucket_level_access = false # matches the bucket's existing real setting
 }
 
 module "staging_bucket" {
-  source     = "../../modules/gcs-bucket"
-  project_id = var.project_id
-  name       = var.staging_bucket_name
-  location   = var.region
+  source                      = "../../modules/gcs-bucket"
+  project_id                  = var.project_id
+  name                        = var.staging_bucket_name
+  location                    = var.region
+  uniform_bucket_level_access = false # matches the bucket's existing real setting
 }
 
 module "openfda_dataset" {
   source      = "../../modules/bq-dataset"
   project_id  = var.project_id
   dataset_id  = local.bq_dataset_id
-  location    = "US"
+  location    = var.region
   description = "Flattened openFDA food adverse event reports (flatten_json.py output)."
 }
 
@@ -94,8 +89,5 @@ module "food_events_table" {
   project_id = var.project_id
   dataset_id = module.openfda_dataset.dataset_id
   table_id   = local.bq_table_id
-  external_data_configuration = {
-    source_uris   = ["gs://${var.data_bucket_name}/${local.flattened_path}/*.parquet"]
-    source_format = "PARQUET"
-  }
+  schema     = file("${path.module}/schemas/food_events_loaded.json")
 }

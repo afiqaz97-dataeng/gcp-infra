@@ -55,17 +55,19 @@ resource "google_project_service" "apis" {
 }
 
 module "crypto_prices_topic" {
-  source             = "../../modules/pubsub-topic"
-  project_id         = var.project_id
-  topic_name         = local.topic_id
-  subscription_name  = local.subscription_id
+  source               = "../../modules/pubsub-topic"
+  project_id           = var.project_id
+  topic_name           = local.topic_id
+  subscription_name    = local.subscription_id
+  ack_deadline_seconds = 10 # matches the existing subscription's real value
 }
 
 module "dataflow_bucket" {
-  source     = "../../modules/gcs-bucket"
-  project_id = var.project_id
-  name       = local.bucket_name
-  location   = var.region
+  source                      = "../../modules/gcs-bucket"
+  project_id                  = var.project_id
+  name                        = local.bucket_name
+  location                    = var.region
+  uniform_bucket_level_access = false # matches the bucket's existing real setting
 }
 
 module "crypto_analytics_dataset" {
