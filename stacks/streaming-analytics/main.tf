@@ -2,6 +2,7 @@
 # NOTE: the Dataflow job itself is intentionally NOT managed here — it's a
 # long-running streaming job launched manually (see that repo's README).
 # This stack only owns the infra it reads/writes.
+# (CI pipeline test — this comment doesn't change any resource.)
 
 terraform {
   required_version = ">= 1.5"
